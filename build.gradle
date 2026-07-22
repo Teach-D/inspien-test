@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.0'
+    id 'io.spring.dependency-management' version '1.1.5'
+}
+
+group = 'com.inspien'
+sourceCompatibility = '17'
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'commons-net:commons-net:3.11.1'   // FTP 전송 (5.3)
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.5.0.24.07'  // ORDER_TB_CONN 복호화 결과가 Oracle이었음
+    runtimeOnly 'com.h2database:h2'  // OUTBOX/INTEGRATION_HISTORY/DLQ 전용 (APPLICANT 계정은 Oracle에 CREATE TABLE 권한 없음)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+// 원칙: "필요한 라이브러리만" — 메시지 브로커, 무거운 스타터 배제 (1.6, 2.3)
