@@ -1,6 +1,7 @@
 package com.inspien.eai.adapter;
 
 import com.inspien.eai.mapper.OrderRow;
+import com.inspien.eai.mapper.ShipmentRow;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +37,34 @@ public class JdbcAdapter {
             assigned.add(withId);
         }
         return assigned;
+    }
+
+    public List<OrderRow> findUnshippedOrders(String applicantKey, int limit) {
+        String sql = "SELECT * FROM (" +
+                "  SELECT ORDER_ID, APPLICANT_KEY, USER_ID, ITEM_ID, NAME, ADDRESS, ITEM_NAME, PRICE, STATUS " +
+                "  FROM RECRUIT.ORDER_TB " +
+                "  WHERE APPLICANT_KEY = ? AND STATUS = 'N'" +
+                ") WHERE ROWNUM <= ?";
+        return jdbcTemplate.query(sql, (rs, i) -> new OrderRow(
+                rs.getString("ORDER_ID"), rs.getString("APPLICANT_KEY"), rs.getString("USER_ID"),
+                rs.getString("ITEM_ID"), rs.getString("NAME"), rs.getString("ADDRESS"),
+                rs.getString("ITEM_NAME"), rs.getString("PRICE"), rs.getString("STATUS")
+        ), applicantKey, limit);
+    }
+
+    public void insertShipment(ShipmentRow row) {
+        String shipmentId = nextLetterDigitId(
+                fetchCurrentMax("RECRUIT.SHIPMENT_TB", "SHIPMENT_ID", row.applicantKey()));
+        jdbcTemplate.update(
+                "INSERT INTO RECRUIT.SHIPMENT_TB (SHIPMENT_ID, APPLICANT_KEY, ORDER_ID, ITEM_ID, ADDRESS, CREATE_DATE) " +
+                        "VALUES (?, ?, ?, ?, ?, SYSTIMESTAMP)",
+                shipmentId, row.applicantKey(), row.orderId(), row.itemId(), row.address());
+    }
+
+    public int markOrderShipped(String orderId, String applicantKey) {
+        return jdbcTemplate.update(
+                "UPDATE RECRUIT.ORDER_TB SET STATUS = 'Y' WHERE ORDER_ID = ? AND APPLICANT_KEY = ? AND STATUS = 'N'",
+                orderId, applicantKey);
     }
 
     private String fetchCurrentMax(String table, String idColumn, String applicantKey) {
