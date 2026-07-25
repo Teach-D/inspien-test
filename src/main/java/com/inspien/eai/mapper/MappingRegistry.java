@@ -10,8 +10,10 @@ public class MappingRegistry {
 
     private final Map<String, Mapper> registry = new ConcurrentHashMap<>();
 
-    public MappingRegistry(OrderXmlToRowMapper orderXmlToRowMapper) {
+    public MappingRegistry(OrderXmlToRowMapper orderXmlToRowMapper,
+                            OrderToShipmentMapper orderToShipmentMapper) {
         register("IF-ORD-001", orderXmlToRowMapper);
+        register("IF-SHP-001", orderToShipmentMapper);
     }
 
     public void register(String interfaceId, Mapper mapper) {
