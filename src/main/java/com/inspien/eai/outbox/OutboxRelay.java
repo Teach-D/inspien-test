@@ -1,5 +1,6 @@
 package com.inspien.eai.outbox;
 
+import com.inspien.eai.dlq.DlqService;
 import com.inspien.eai.factory.TransferClientFactory;
 import com.inspien.eai.history.IntegrationHistoryRepository;
 import com.inspien.eai.transfer.FileTransferClient;
@@ -16,13 +17,16 @@ public class OutboxRelay {
     private final OutboxRepository outboxRepository;
     private final TransferClientFactory transferClientFactory;
     private final IntegrationHistoryRepository historyRepository;
+    private final DlqService dlqService;
 
     public OutboxRelay(OutboxRepository outboxRepository,
                         TransferClientFactory transferClientFactory,
-                        IntegrationHistoryRepository historyRepository) {
+                        IntegrationHistoryRepository historyRepository,
+                        DlqService dlqService) {
         this.outboxRepository = outboxRepository;
         this.transferClientFactory = transferClientFactory;
         this.historyRepository = historyRepository;
+        this.dlqService = dlqService;
     }
 
     public void sendNow(Outbox outbox, String correlationId) {
@@ -50,8 +54,7 @@ public class OutboxRelay {
             if (nextRetryCount >= MAX_RETRY) {
                 historyRepository.record(correlationId, INTERFACE_ID_ACC, "FAILED", "FAIL",
                         null, outbox.fileName(), summarize(e), nextRetryCount, "ERROR");
-                log.error("[{}][{}][FAILED seq={}] 최대 재시도 초과, 포기: {}",
-                        correlationId, INTERFACE_ID_ACC, nextRetryCount, e.getMessage());
+                dlqService.isolate(correlationId, INTERFACE_ID_ACC, outbox.payload(), summarize(e), nextRetryCount);
             } else {
                 historyRepository.record(correlationId, INTERFACE_ID_ACC, "FTP_RETRY", "FAIL",
                         null, outbox.fileName(), summarize(e), nextRetryCount, "WARN");
