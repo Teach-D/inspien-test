@@ -18,11 +18,16 @@ public class DlqService {
     }
 
     public void isolate(String correlationId, String interfaceId, String payload, String lastError, int retryCount) {
-        jdbcTemplate.update(
-                "INSERT INTO DLQ (DLQ_ID, CORRELATION_ID, INTERFACE_ID, PAYLOAD, LAST_ERROR, RETRY_COUNT, STATUS, CREATED_AT) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, 'WAIT', CURRENT_TIMESTAMP)",
-                UUID.randomUUID().toString(), correlationId, interfaceId, payload, lastError, retryCount);
-        log.error("[{}][{}] DLQ 격리: {}", correlationId, interfaceId, lastError);
+        try {
+            jdbcTemplate.update(
+                    "INSERT INTO DLQ (DLQ_ID, CORRELATION_ID, INTERFACE_ID, PAYLOAD, LAST_ERROR, RETRY_COUNT, STATUS, CREATED_AT) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, 'WAIT', CURRENT_TIMESTAMP)",
+                    UUID.randomUUID().toString(), correlationId, interfaceId, payload, lastError, retryCount);
+            log.error("[{}][{}] DLQ 격리: {}", correlationId, interfaceId, lastError);
+        } catch (Exception e) {
+            log.error("[{}][{}] DLQ INSERT 실패 — 메시지 소실 위험: lastError={} dlqError={}",
+                    correlationId, interfaceId, lastError, e.getMessage(), e);
+        }
     }
 
     public void reprocess(String dlqId, Runnable retryAction) {

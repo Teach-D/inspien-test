@@ -54,6 +54,7 @@ public class FtpTransferClient implements FileTransferClient {
             boolean loginOk = ftp.login(conn.username(), conn.password());
             System.out.println("[FTP] login() 결과=" + loginOk);
             if (!loginOk) {
+                connectionProvider.invalidate();
                 throw new IllegalStateException("FTP 로그인 실패: user=" + conn.username());
             }
 
@@ -62,6 +63,10 @@ public class FtpTransferClient implements FileTransferClient {
             if (conn.remoteDir() != null && !conn.remoteDir().isBlank()) {
                 boolean cdOk = ftp.changeWorkingDirectory(conn.remoteDir());
                 System.out.println("[FTP] changeWorkingDirectory(" + conn.remoteDir() + ") 결과=" + cdOk);
+                if (!cdOk) {
+                    throw new IllegalStateException(
+                            "FTP 원격 디렉토리 이동 실패: " + conn.remoteDir() + " reply=" + ftp.getReplyCode());
+                }
             }
 
             try (var in = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))) {

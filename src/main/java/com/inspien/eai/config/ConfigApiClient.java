@@ -2,6 +2,7 @@ package com.inspien.eai.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.support.BasicAuthenticationInterceptor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -36,6 +37,16 @@ public class ConfigApiClient {
                         "PHONE_NUMBER", phoneNumber,
                         "E_MAIL", email))
                 .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
+                    throw new IllegalStateException(
+                            "Config API 인증/요청 오류 " + res.getStatusCode().value()
+                            + " — 자격증명 또는 요청 파라미터를 확인하세요");
+                })
+                .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
+                    throw new IllegalStateException(
+                            "Config API 서버 오류 " + res.getStatusCode().value()
+                            + " — 잠시 후 재시도하거나 서버 상태를 확인하세요");
+                })
                 .body(String.class);
 
         try {

@@ -32,4 +32,8 @@ public class FtpConnectionProvider {
         }
         return cached;
     }
+
+    public synchronized void invalidate() {
+        cached = null;
+    }
 }
